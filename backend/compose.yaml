@@ -1,0 +1,54 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "always"]
+    volumes:
+      - dave-redis:/data
+    ports:
+      - "127.0.0.1:${DAVE_REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      args:
+        DAVE_UID: ${DAVE_UID:-1000}
+        DAVE_GID: ${DAVE_GID:-1000}
+        DAVE_HOME: ${HOME}
+    user: "${DAVE_UID:-1000}:${DAVE_GID:-1000}"
+    security_opt:
+      - label=disable
+    env_file: ${DAVE_ENV_FILE:-.env}
+    command: ["uvicorn", "dave_backend.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "127.0.0.1:${DAVE_API_PORT:-8000}:8000"
+    volumes:
+      - ${DAVE_SSH_DIR:-${HOME}/.ssh}:${HOME}/.ssh:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      args:
+        DAVE_UID: ${DAVE_UID:-1000}
+        DAVE_GID: ${DAVE_GID:-1000}
+        DAVE_HOME: ${HOME}
+    user: "${DAVE_UID:-1000}:${DAVE_GID:-1000}"
+    security_opt:
+      - label=disable
+    env_file: ${DAVE_ENV_FILE:-.env}
+    command: ["python", "-m", "dave_backend.worker"]
+    volumes:
+      - ${DAVE_SSH_DIR:-${HOME}/.ssh}:${HOME}/.ssh:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  dave-redis:

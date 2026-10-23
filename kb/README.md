@@ -9,6 +9,7 @@ This KB is the design contract for a single-user FastAPI/Redis service running o
 3. [API and integration contracts](contracts.md)
 4. [Slurm lifecycle and checkpoint semantics](slurm-lifecycle.md)
 5. [Implementation and validation plan](implementation.md)
+6. [Guida ai concetti e ai primi esperimenti](learning-guide.md)
 
 ## Evidence and scope
 

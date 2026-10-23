@@ -1,0 +1,30 @@
+services:
+  dave:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dave-ros-noetic:local
+    working_dir: /catkin_ws
+    command: ["sleep", "infinity"]
+    network_mode: host
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      XAUTHORITY: /tmp/.Xauthority
+      GUI: ${GUI:-true}
+      QT_X11_NO_MITSHM: "1"
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      ROS_MASTER_URI: http://localhost:11311
+      ROS_IP: 127.0.0.1
+    security_opt:
+      - label=disable
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - catkin_ws:/catkin_ws
+      - ..:/catkin_ws/src/dave:ro
+      - ../.dave-docker/deps:/catkin_ws/src/external
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ${XAUTHORITY}:/tmp/.Xauthority:ro
+
+volumes:
+  catkin_ws:

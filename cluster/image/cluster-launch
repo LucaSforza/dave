@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+source /opt/ros/noetic/setup.bash
+source /opt/dave/devel/setup.bash
+# Original DAVE demo/world; apply validated flattened create coordinates after model spawn.
+X=4 Y=4 Z=-93 YAW=-1.8
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --scenario) [[ "$2" == uw_lidar ]] || exit 2; shift 2 ;;
+    --x) X=$2; shift 2 ;; --y) Y=$2; shift 2 ;; --z) Z=$2; shift 2 ;; --yaw) YAW=$2; shift 2 ;;
+    *) echo "unsupported cluster launch argument" >&2; exit 2 ;;
+  esac
+done
+# The session supervisor starts the original GUI separately and watches it.
+roslaunch dave_demo_launch dave_uw_lidar_demo.launch gui:=false &
+LAUNCH_PID=$!
+cleanup() { kill -TERM "$LAUNCH_PID" 2>/dev/null || true; wait "$LAUNCH_PID" 2>/dev/null || true; }
+trap cleanup TERM INT
+python3 /opt/dave/apply_initial_pose.py "$X" "$Y" "$Z" "$YAW"
+wait "$LAUNCH_PID"

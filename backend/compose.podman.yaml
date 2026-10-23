@@ -1,0 +1,7 @@
+# Rootless Podman needs keep-id to read the user's mode-0600 SSH keys/socket.
+# Do not apply this override to Docker Engine.
+services:
+  api:
+    userns_mode: keep-id
+  worker:
+    userns_mode: keep-id

@@ -20,6 +20,8 @@ classDiagram
         +allocations: list
         +cancel_requested: bool
         +checkpoint: dict
+        +runtime: dict
+        +revision: int
     }
     class AllocationRecord {
         +index: int
@@ -37,8 +39,10 @@ classDiagram
         +create(record)
         +get(id)
         +list()
-        +save(record)
-        +lock()
+        +save(record, expected_revision, lock_token)
+        +acquire_lock()
+        +renew_lock(token)
+        +request_cancel(id)
     }
     class ClusterController {
         +tick()
@@ -47,40 +51,71 @@ classDiagram
     class SSHTransport {
         +call(operation, payload) dict
     }
-    class RemoteDispatcher {
-        +submit()
-        +inspect()
-        +cancel()
-        +logs()
-        +artifacts()
-        +control()
-        +preflight()
+    class Dispatcher {
+        +op_submit()
+        +op_inspect()
+        +op_cancel()
+        +op_logs()
+        +op_artifacts()
+        +op_control()
+        +op_preflight()
     }
-    class SessionRuntime {
-        +launchDesktopAndGazebo()
+    class Session {
+        +run()
+        +start_desktop()
+        +start_simulation()
         +checkpoint()
         +restore()
         +shutdown()
     }
-    class SimulatorAdapter {
-        +health()
+    class RexrovAdapter {
+        +validate_health()
         +pause()
         +resume()
         +reset()
-        +saveExplicitState()
-        +restoreExplicitState()
+        +snapshot(pause_state)
+        +restore(state)
     }
     JobRecord *-- JobCreate
     JobRecord *-- AllocationRecord
     JobService --> RedisStore
     ClusterController --> RedisStore
     ClusterController --> SSHTransport
-    SSHTransport --> RemoteDispatcher : OpenSSH / JSON
-    RemoteDispatcher --> SessionRuntime : sbatch
-    SessionRuntime --> SimulatorAdapter : ROS Noetic
+    SSHTransport --> Dispatcher : OpenSSH / JSON
+    Dispatcher --> Session : sbatch / runtime.sh
+    Session --> RexrovAdapter : ROS Noetic
 ```
 
 ## Launch and desktop sequence
+
+Convenience entry point `just run-cluster` performs the startup/preflight below
+before entering the existing job lifecycle. It returns a queued logical session
+by default; `--desktop` additionally waits for readiness and connects.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Run as run-cluster launcher
+    participant Docker as Local Compose stack
+    participant API as FastAPI
+    User->>Run: just run-cluster
+    Run->>Run: Validate parameters, create missing local env only
+    Run->>Docker: up -d --build (PC only)
+    Run->>API: Wait for health
+    Run->>API: GET /cluster preflight
+    alt Missing remote prerequisites
+        Run-->>User: Stop with setup instructions, no new job
+    else Preflight succeeds
+        Run->>API: GET /jobs
+        alt Matching active request and not --new
+            Run-->>User: Reuse existing session ID
+        else New session explicitly permitted
+            Run->>API: POST /jobs with idempotency key
+            API-->>Run: 202 logical job
+            Run-->>User: ID, queue status and control commands
+        end
+    end
+```
 
 ```mermaid
 sequenceDiagram

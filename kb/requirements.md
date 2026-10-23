@@ -19,13 +19,14 @@
 - Serve API and Redis only on loopback; no unauthenticated public service. API defaults are single trusted local user, not a multi-tenant security boundary. Disable permissive CORS.
 - API accepts structured validated operations, never arbitrary shell commands, launch filenames, or user-controlled Slurm directives.
 - SSH uses subprocess argument lists, BatchMode, strict host verification, explicit timeouts and bounded output. JSON over stdin; quote trusted fixed remote executable paths separately. Never `shell=True` locally.
+- Compose preserves the host user's absolute home path in the image and mounts only `.ssh` read-only at that path. Rootless Podman uses keep-id; optional SSH-agent forwarding must be explicitly enabled. Never rewrite the user's shared SSH configuration automatically.
 - Redis persists to a named volume with AOF. Persist metadata/state, not huge log streams or simulation artifacts. Logs/downloads are bounded and paths confined to the job root.
 - QoS previously observed: one submitted/running job. Account-wide coordination must also detect external jobs and wait instead of over-submitting.
 - Remote desktop and resume involve disconnections and queue delay, not a seamless 24/7 allocation.
 
 ## Deployment choices
 
-- `backend/`: independent Python 3.11+ package `dave_backend`, tests and container stack.
+- `backend/`: independent Python 3.12+ package `dave_backend`, tests and container stack, reproducible `uv.lock`.
 - `cluster/`: standard-library remote dispatcher plus ROS/container runtime, separate from existing local setup.
 - `client/`: lightweight Python HTTP client/CLI, optionally opens browser and SSH desktop tunnel. No new 3D renderer.
 - Remote runtime defaults to SingularityCE with a prebuilt complete SIF and explicit shared job storage. No implicit image building on login.

@@ -1,0 +1,6 @@
+{
+  "image": "/shared/private/dave-cluster/images/dave-noetic.sif",
+  "use_nvidia": false,
+  "checkpoint_interval_seconds": 60,
+  "walltime_minutes": 30
+}

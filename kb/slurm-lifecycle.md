@@ -11,11 +11,13 @@
 
 Use `#SBATCH --signal=B:USR1@180` and `--time=00:30:00` (or shorter user limit), a shell trap and an independent compute-runtime safety timer. Shell must launch the runtime in background and wait so traps can run; do not block traps behind a foreground command. Send the signal to the supervised runtime, wait for checkpoint/shutdown and clean up child processes. Also save periodically (default 60 s) so abrupt node loss loses bounded recent progress.
 
-`--requeue` does not save application state: the batch script runs again from its beginning. Do not assume time-limit exhaustion automatically requeues. MVP uses new allocations managed by PC controller, not automatic requeue. Each attempt is traceable under a stable logical job id.
+`--requeue` does not save application state: the batch script runs again from its beginning. Do not assume time-limit exhaustion automatically requeues. MVP explicitly requests `--no-requeue` and uses new allocations managed by PC controller instead. Each attempt is traceable under a stable logical job id.
 
 Submit successor only after terminal scheduler state and a complete validated rollover checkpoint. A checkpoint alone may be periodic and must not cause renewal after normal completion or cancellation. Respect MaxSubmit=1: do not pre-submit dependent jobs while old job is active. Re-query all the user's jobs before submission. A queue wait is expected, never promise uninterrupted desktop continuity.
 
 Budget: default at most 2 allocations, at most 4 configurable. Cancel sets durable desired state before scancel, disables renewal immediately. Once budget is exhausted retain checkpoint/artifacts and explain completion; unexpected timeout/node failure/missing checkpoint becomes needs_attention rather than silently looping. Redis outages, SSH loss and controller restart must not fabricate terminal states or duplicate submissions.
+
+Cancellation is acknowledged as **intent** while an allocation is submitting/running. A submission already in flight over SSH cannot be atomically undone by a Redis transaction: recover its Slurm ID and cancel it, and report `cancelled` only after authoritative confirmation. Re-read cancellation immediately before submitting to narrow that race; never promise zero transient resource use for an in-flight request.
 
 ## Application vs process checkpoint
 

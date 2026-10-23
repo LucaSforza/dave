@@ -38,3 +38,16 @@
 
 # vs code
 .vscode
+
+# Local ROS Docker workspace and downloaded simulation dependencies
+/.dave-docker/
+
+# Local Python environments, tests and cluster-control credentials
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+/backend/.env
+/client/.env
